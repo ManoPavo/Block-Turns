@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Aqua Block Rotate</title>
+
+<style>
+
+body{
+margin:0;
+background:#4fd7cc;
+font-family:Arial;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+height:100vh;
+}
+
+#score{
+color:white;
+font-size:22px;
+margin-bottom:10px;
+}
+
+#board{
+display:grid;
+grid-template-columns:repeat(8,45px);
+grid-template-rows:repeat(8,45px);
+gap:4px;
+transition:transform .5s;
+}
+
+.cell{
+width:45px;
+height:45px;
+background:#dfffff;
+border-radius:6px;
+}
+
+.filled{
+background:#1b7e78;
+}
+
+#pieces{
+display:flex;
+gap:25px;
+margin-top:30px;
+}
+
+.piece{
+display:grid;
+gap:3px;
+cursor:grab;
+}
+
+.block{
+width:22px;
+height:22px;
+background:#1b7e78;
+border-radius:4px;
+}
+
+</style>
+</head>
+<body>
+
+<div id="score">Score: 0</div>
+
+<div id="board"></div>
+
+<div id="pieces"></div>
+
+<script>
+
+const boardSize=8
+let board=[]
+let score=0
+let rotation=0
+
+let dragPiece=null
+let dragShape=null
+
+const shapes=[
+
+[[1]],
+[[1,1]],
+[[1],[1]],
+[[1,1,1]],
+[[1],[1],[1]],
+[[1,1],[1,1]],
+[[1,0],[1,1]]
+
+]
+
+const boardDiv=document.getElementById("board")
+const piecesDiv=document.getElementById("pieces")
+
+function createBoard(){
+
+boardDiv.innerHTML=""
+board=[]
+
+for(let y=0;y<boardSize;y++){
+
+let row=[]
+
+for(let x=0;x<boardSize;x++){
+
+let cell=document.createElement("div")
+cell.className="cell"
+
+boardDiv.appendChild(cell)
+row.push(cell)
+
+}
+
+board.push(row)
+
+}
+
+}
+
+function generatePieces(){
+
+piecesDiv.innerHTML=""
+
+for(let i=0;i<3;i++){
+
+let shape=JSON.parse(JSON.stringify(
+shapes[Math.floor(Math.random()*shapes.length)]
+))
+
+let r = (rotation/90)%4
+
+for(let k=0;k<r;k++){
+shape = rotateShape(shape)
+}
+
+let piece=document.createElement("div")
+piece.className="piece"
+
+piece.style.gridTemplateColumns=`repeat(${shape[0].length},22px)`
+
+shape.forEach(row=>{
+row.forEach(v=>{
+let b=document.createElement("div")
+if(v)b.className="block"
+else b.style.visibility="hidden"
+piece.appendChild(b)
+})
+})
+
+piece.onmousedown=e=>startDrag(e,piece,shape)
+piece.ontouchstart=e=>startDrag(e,piece,shape)
+
+piecesDiv.appendChild(piece)
+
+}
+
+}
+function startDrag(e,piece,shape){
+
+dragPiece=piece
+dragShape=shape
+
+document.onmousemove=dragMove
+document.onmouseup=dropPiece
+
+document.ontouchmove=dragMove
+document.ontouchend=dropPiece
+
+}
+
+function dragMove(e){
+
+if(!dragPiece)return
+
+let x=e.touches?e.touches[0].clientX:e.clientX
+let y=e.touches?e.touches[0].clientY:e.clientY
+
+dragPiece.style.position="absolute"
+dragPiece.style.left=(x-30)+"px"
+dragPiece.style.top=(y-30)+"px"
+
+}
+
+function dropPiece(e){
+
+if(!dragPiece) return
+
+let rect = boardDiv.getBoundingClientRect()
+
+let clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX
+let clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY
+
+let centerX = rect.left + rect.width/2
+let centerY = rect.top + rect.height/2
+
+let dx = clientX - centerX
+let dy = clientY - centerY
+
+let angle = -(rotation * Math.PI / 180)
+
+let rx = dx * Math.cos(angle) - dy * Math.sin(angle)
+let ry = dx * Math.sin(angle) + dy * Math.cos(angle)
+
+let x = rx + rect.width/2
+let y = ry + rect.height/2
+
+let cellSize = 49
+
+let gx = Math.floor(x / cellSize)
+let gy = Math.floor(y / cellSize)
+
+placePiece(gx,gy)
+
+dragPiece.style.position="static"
+
+dragPiece=null
+dragShape=null
+
+document.onmousemove=null
+document.onmouseup=null
+document.ontouchmove=null
+document.ontouchend=null
+
+}
+
+
+function placePiece(px,py){
+
+if(!dragShape)return
+
+for(let y=0;y<dragShape.length;y++){
+for(let x=0;x<dragShape[0].length;x++){
+
+if(dragShape[y][x]){
+
+let bx=px+x
+let by=py+y
+
+if(bx>=boardSize||by>=boardSize)return
+if(board[by][bx].classList.contains("filled"))return
+
+}
+
+}
+}
+
+for(let y=0;y<dragShape.length;y++){
+for(let x=0;x<dragShape[0].length;x++){
+
+if(dragShape[y][x]){
+
+let bx=px+x
+let by=py+y
+
+board[by][bx].classList.add("filled")
+
+score++
+
+}
+
+}
+}
+
+dragPiece.remove()
+
+checkLines()
+updateScore()
+
+if(piecesDiv.children.length==0){
+
+generatePieces()
+rotateBoard()
+
+}
+
+}
+
+function checkLines(){
+
+for(let y=0;y<boardSize;y++){
+
+let full=true
+
+for(let x=0;x<boardSize;x++){
+if(!board[y][x].classList.contains("filled"))
+full=false
+}
+
+if(full){
+
+for(let x=0;x<boardSize;x++)
+board[y][x].classList.remove("filled")
+
+score+=10
+
+}
+
+}
+
+for(let x=0;x<boardSize;x++){
+
+let full=true
+
+for(let y=0;y<boardSize;y++){
+if(!board[y][x].classList.contains("filled"))
+full=false
+}
+
+if(full){
+
+for(let y=0;y<boardSize;y++)
+board[y][x].classList.remove("filled")
+
+score+=10
+
+}
+
+}
+
+}
+
+function rotateBoard(){
+
+rotation+=90
+boardDiv.style.transform=`rotate(${rotation}deg)`
+
+}
+
+function updateScore(){
+
+document.getElementById("score").innerText="Score: "+score
+
+}
+
+createBoard()
+generatePieces()
+
+</script>
+
+</body>
+</html>
