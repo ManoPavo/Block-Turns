@@ -1,1594 +1,925 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Aqua Axis Blocks Deluxe</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Aqua Axis Blocks Deluxe</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
 
+    html {
+      overflow: hidden;
+    }
 
+    body {
+      display: flex;
+      min-height: 100vh;
+      margin: 0;
+      padding: 10px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #4fd7cc;
+      font-family: "Arial Black", "Segoe UI Black", Impact, Arial, sans-serif;
+      font-weight: 900;
+    }
 
-<style>
-*{
-box-sizing:border-box;
-touch-action:none;
--webkit-user-select:none;
-user-select:none;
-}
+    body.defeat {
+      animation: screenShake 0.5s linear 4;
+    }
 
+    #topbar {
+      display: flex;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      color: white;
+      font-size: 22px;
+      font-weight: 900;
+    }
 
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, 42px);
+      grid-template-rows: repeat(8, 42px);
+      gap: 4px;
+      transform-origin: center;
+      transition: transform 0.8s;
+    }
 
-body{
-margin:0;
-background:#4fd7cc;
-min-height:100vh;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-font-family:Arial,sans-serif;
-overflow:hidden;
-padding:10px;
-}
+    .cell {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: #dfffff;
+      transition: background 0.2s;
+    }
 
+    .fill {
+      background: #1b7e78;
+    }
 
+    .ghost {
+      outline: 2px dashed rgba(27, 126, 120, 0.8);
+      background: rgba(27, 126, 120, 0.35);
+    }
 
-#topbar{
-display:flex;
-gap:20px;
-color:white;
-font-weight:bold;
-font-size:20px;
-margin-bottom:15px;
-flex-wrap:wrap;
-justify-content:center;
-}
+    #pieces {
+      display: flex;
+      min-height: 104px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
 
+    .piece {
+      display: grid;
+      width: 104px;
+      height: 104px;
+      align-content: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: grab;
+      transform-origin: center;
+      transition: transform 0.8s;
+      touch-action: none;
+    }
 
+    .block {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: #1b7e78;
+    }
 
-#board{
-display:grid;
-grid-template-columns:repeat(8,42px);
-grid-template-rows:repeat(8,42px);
-gap:4px;
-transition:transform .8s;
-transform-origin:center;
-}
+    .bomb {
+      background: #ffca28;
+      box-shadow: 0 0 10px #ffca28;
+    }
 
+    .dragging {
+      position: fixed !important;
+      z-index: 9999;
+      pointer-events: none;
+    }
 
+    .fx {
+      position: fixed;
+      z-index: 9000;
+      border-radius: 50%;
+      pointer-events: none;
+    }
 
-.cell{
-width:42px;
-height:42px;
-background:#dfffff;
-border-radius:8px;
-transition:
-transform .25s,
-opacity .25s,
-background .2s;
-}
+    #goldBlast {
+      position: fixed;
+      z-index: 9500;
+      display: none;
+      overflow: hidden;
+      pointer-events: none;
+      inset: 0;
+    }
 
+    #goldBlast .flash {
+      position: absolute;
+      background: radial-gradient(circle, #fff6b0 0%, #ffca28 45%, #c98a00 100%);
+      opacity: 0;
+      inset: 0;
+    }
 
+    #goldBlast .ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100px;
+      height: 100px;
+      margin: -50px;
+      border: 12px solid #ffe066;
+      border-radius: 50%;
+      box-shadow: 0 0 60px #ffca28;
+    }
 
-.fill{
-background:#1b7e78;
-}
+    #goldBlast .spark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      margin: -7px;
+      border-radius: 50%;
+      background: #ffe066;
+      box-shadow: 0 0 14px #ffca28;
+    }
 
+    #restartCurtain {
+      position: fixed;
+      z-index: 20000;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(16, 1fr);
+      overflow: hidden;
+      background: transparent;
+      pointer-events: none;
+      gap: 0;
+      inset: 0;
+    }
 
+    #restartCurtain[hidden] {
+      display: none;
+    }
 
-.clearAnim{
-transform:scale(.2);
-opacity:0;
-}
+    .curtainBlock {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: #1b7e78;
+      will-change: transform, opacity;
+    }
 
+    #overlay {
+      position: fixed;
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      inset: 0;
+    }
 
+    #overlay.visible {
+      display: flex;
+      animation: deathFade 0.8s ease-out both;
+    }
 
-.ghost{
-background:rgba(27,126,120,.35);
-outline:2px dashed rgba(27,126,120,.8);
-}
+    #vignette {
+      position: fixed;
+      z-index: 9900;
+      display: none;
+      box-shadow: inset 0 0 200px 60px rgba(160, 0, 0, 0.85);
+      pointer-events: none;
+      inset: 0;
+    }
 
+    body.defeat #vignette {
+      display: block;
+      animation: pulseRed 1s ease-in-out infinite alternate;
+    }
 
+    #gameover {
+      padding: 25px;
+      border-radius: 20px;
+      background: white;
+      text-align: center;
+      animation: deathCard 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+    }
 
-.special{
-background:#ffca28!important;
-}
+    #gameover h2 {
+      margin: 0 0 10px;
+      color: #b00020;
+      font-size: 36px;
+      font-weight: 900;
+      animation: deathTitle 0.6s ease-in-out infinite alternate;
+    }
 
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+    }
 
+    @keyframes screenShake {
+      0%,
+      100% { transform: translate(0, 0); }
+      20% { transform: translate(-12px, 6px) rotate(-1deg); }
+      40% { transform: translate(10px, -8px) rotate(1deg); }
+      60% { transform: translate(-8px, -6px); }
+      80% { transform: translate(8px, 8px) rotate(0.5deg); }
+    }
 
-#pieces{
-display:flex;
-gap:18px;
-margin-top:30px;
-min-height:100px;
-align-items:center;
-justify-content:center;
-flex-wrap:wrap;
-}
+    @keyframes pulseRed {
+      from { opacity: 0.4; }
+      to { opacity: 1; }
+    }
 
+    @keyframes deathFade {
+      from { opacity: 0; background: rgba(120, 0, 0, 0.9); }
+      to { opacity: 1; }
+    }
 
+    @keyframes deathCard {
+      from { transform: scale(0) rotate(-540deg); opacity: 0; }
+      to { transform: scale(1) rotate(0); opacity: 1; }
+    }
 
-.piece{
-display:grid;
-gap:3px;
-cursor:grab;
-transition:transform .8s;
-transform-origin:center;
-touch-action:none;
-}
-
-
-
-.block{
-width:22px;
-height:22px;
-background:#1b7e78;
-border-radius:4px;
-}
-
-
-
-.bomb{
-background:#ffca28;
-}
-
-
-
-.dragging{
-position:fixed!important;
-z-index:9999;
-pointer-events:none;
-}
-
-
-
-#overlay{
-position:fixed;
-inset:0;
-display:none;
-justify-content:center;
-align-items:center;
-background:rgba(0,0,0,.5);
-z-index:10000;
-}
-
-
-
-#gameover{
-background:white;
-padding:25px;
-border-radius:20px;
-text-align:center;
-}
-
-
-
-button{
-border:none;
-padding:12px 20px;
-border-radius:10px;
-font-size:16px;
-}
-</style>
+    @keyframes deathTitle {
+      from { transform: scale(1) rotate(-3deg); }
+      to { transform: scale(1.25) rotate(3deg); text-shadow: 0 0 14px #f00; }
+    }
+  </style>
 </head>
 <body>
-
-
-
-<div id="topbar">
-<div id="score">Score: 0</div>
-<div id="best">Recorde: 0</div>
-</div>
-
-
-
-<div id="board"></div>
-
-
-
-<div id="pieces"></div>
-
-
-
-<div id="overlay">
-<div id="gameover">
-<h2>Game Over</h2>
-<p id="finalScore"></p>
-<button onclick="restart()">Jogar novamente</button>
-</div>
-</div>
-
-
-
+  <div id="topbar">
+    <div id="score">Score: 0</div>
+    <div id="best">Recorde: 0</div>
+  </div>
+  <div id="board"></div>
+  <div id="pieces"></div>
+  <div id="vignette"></div>
+  <div id="goldBlast">
+    <div class="flash"></div>
+    <div class="ring"></div>
+  </div>
+  <div id="restartCurtain" hidden></div>
+  <div id="overlay">
+    <div id="gameover">
+      <h2>Game Over</h2>
+      <p id="finalScore"></p>
+      <button onclick="restart()">Jogar novamente</button>
+    </div>
+  </div>
 <script>
-
-
-
-const SIZE=8
-
-
-
-let score=0
-let rotation=0
-
-
-
-let drag=null
-let shape=null
-let ghost=[]
-
-
-
-let best=
-parseInt(
-localStorage.getItem(
-"aqua_best"
-)||0)
-
-
-
-const board=[]
-
-
-
-const boardDiv=
-document.getElementById("board")
-
-
-
-const piecesDiv=
-document.getElementById("pieces")
-
-
-
-const scoreDiv=
-document.getElementById("score")
-
-
-
-const bestDiv=
-document.getElementById("best")
-
-
-
-const overlay=
-document.getElementById("overlay")
-
-
-
-const finalScore=
-document.getElementById("finalScore")
-
-
-
-const SHAPES=[
-
-
-
-[[1]],
-[[1,1]],
-[[1],[1]],
-[[1,1,1]],
-[[1],[1],[1]],
-[[1,1],[1,1]],
-[[1,0],[1,1]],
-[[0,1],[1,1]],
-[[1,1,1],[0,1,0]],
-[[1,1,1],[1,0,0]],
-[[1,1,1],[0,0,1]],
-[[1,1,0],[0,1,1]],
-[[1,1,1,1]]
-
-
-
-]
-
-
-
-function sound(freq,time){
-
-
-
-let ctx=
-new(
-window.AudioContext||
-window.webkitAudioContext
-)()
-
-
-
-let osc=
-ctx.createOscillator()
-
-
-
-let gain=
-ctx.createGain()
-
-
-
-osc.connect(gain)
-gain.connect(ctx.destination)
-
-
-
-osc.frequency.value=freq
-
-
-
-gain.gain.value=.05
-
-
-
-osc.start()
-
-
-
-gain.gain.exponentialRampToValueAtTime(
-0.001,
-ctx.currentTime+time
-)
-
-
-
-osc.stop(
-ctx.currentTime+time
-)
-
-
-
+const SIZE = 8;
+const CELL = 46;
+const SPECIAL_CHANCE = 0.03;
+const GOLD_BONUS = 1000;
+const RAINBOW = [
+  "#ff3b30",
+  "#ff9500",
+  "#ffe600",
+  "#34c759",
+  "#00c7ff",
+  "#5856d6",
+  "#ff2d95",
+];
+
+let score = 0;
+let rotation = 0;
+let drag = null;
+let shape = null;
+let ghost = [];
+let resolving = false;
+let gameOver = false;
+let audioContext = null;
+let best = parseInt(localStorage.getItem("aqua_best") || 0);
+
+const board = [];
+const boardDiv = document.getElementById("board");
+const piecesDiv = document.getElementById("pieces");
+const scoreDiv = document.getElementById("score");
+const bestDiv = document.getElementById("best");
+const overlay = document.getElementById("overlay");
+const finalScore = document.getElementById("finalScore");
+const goldBlast = document.getElementById("goldBlast");
+const SHAPES = [
+  [[1]],
+  [[1, 1]],
+  [[1], [1]],
+  [[1, 1, 1]],
+  [[1], [1], [1]],
+  [[1, 1], [1, 1]],
+  [[1, 0], [1, 1]],
+  [[0, 1], [1, 1]],
+  [[1, 1, 1], [0, 1, 0]],
+  [[1, 1, 1], [1, 0, 0]],
+  [[1, 1, 1], [0, 0, 1]],
+  [[1, 1, 0], [0, 1, 1]],
+  [[1, 1, 1, 1]],
+];
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+
+function sound(freq, time) {
+  try {
+    audioContext =
+      audioContext ||
+      new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.frequency.value = freq;
+    gain.gain.setValueAtTime(0.05, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      audioContext.currentTime + time,
+    );
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + time);
+  } catch (error) {}
 }
 
-
-
-function vibrate(ms){
-
-
-
-if(
-navigator.vibrate
-){
-
-
-
-navigator.vibrate(ms)
-
-
-
+function vibrate(ms) {
+  if (navigator.vibrate) navigator.vibrate(ms);
 }
 
+function init() {
+  bestDiv.innerText = "Recorde: " + best;
 
+  for (let y = 0; y < SIZE; y++) {
+    board[y] = [];
 
+    for (let x = 0; x < SIZE; x++) {
+      board[y][x] = 0;
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      boardDiv.appendChild(cell);
+    }
+  }
+
+  render();
+  generatePieces();
 }
 
+function render() {
+  const cells = document.querySelectorAll(".cell");
+  let index = 0;
 
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      cells[index].className = board[y][x] ? "cell fill" : "cell";
+      index++;
+    }
+  }
 
-function init(){
+  ghost.forEach((position) => {
+    const cell = cells[position.y * SIZE + position.x];
+    if (cell) cell.classList.add("ghost");
+  });
 
-
-
-bestDiv.innerText=
-"Recorde: "+best
-
-
-
-for(let y=0;y<SIZE;y++){
-
-
-
-board[y]=[]
-
-
-
-for(let x=0;x<SIZE;x++){
-
-
-
-board[y][x]=0
-
-
-
-let cell=
-document.createElement("div")
-
-
-
-cell.className=
-"cell"
-
-
-
-boardDiv.appendChild(cell)
-
-
-
+  scoreDiv.innerText = "Score: " + score;
+  if (score > best) {
+    best = score;
+    localStorage.setItem("aqua_best", best);
+    bestDiv.innerText = "Recorde: " + best;
+  }
 }
 
+function generatePieces() {
+  piecesDiv.innerHTML = "";
 
+  for (let i = 0; i < 3; i++) {
+    const special = Math.random() < SPECIAL_CHANCE;
+    const currentShape = special
+      ? [[1]]
+      : JSON.parse(
+          JSON.stringify(SHAPES[Math.floor(Math.random() * SHAPES.length)]),
+        );
+    const piece = document.createElement("div");
 
+    piece.className = "piece";
+    piece.dataset.special = special;
+    piece.dataset.shape = JSON.stringify(currentShape);
+    piece.style.gridTemplateColumns = `repeat(${currentShape[0].length}, 22px)`;
+    piece.style.transform = `rotate(${rotation}deg)`;
+
+    currentShape.forEach((row) =>
+      row.forEach((value) => {
+        const block = document.createElement("div");
+        if (value) {
+          block.className = special ? "block bomb" : "block";
+        } else {
+          block.style.visibility = "hidden";
+        }
+        piece.appendChild(block);
+      }),
+    );
+
+    piece.addEventListener("pointerdown", startDrag);
+    piecesDiv.appendChild(piece);
+  }
 }
 
+function startDrag(event) {
+  if (resolving || gameOver || drag) return;
 
-
-render()
-generatePieces()
-
-
-
+  drag = event.currentTarget;
+  shape = JSON.parse(drag.dataset.shape);
+  drag.classList.add("dragging");
+  move(event);
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", drop);
 }
 
+function toGrid(clientX, clientY) {
+  const rect = boardDiv.getBoundingClientRect();
+  const dx = clientX - (rect.left + rect.width / 2);
+  const dy = clientY - (rect.top + rect.height / 2);
+  const radians = (-rotation * Math.PI) / 180;
+  const rotatedX = dx * Math.cos(radians) - dy * Math.sin(radians);
+  const rotatedY = dx * Math.sin(radians) + dy * Math.cos(radians);
 
-
-function render(){
-
-
-
-const cells=
-document.querySelectorAll(".cell")
-
-
-
-let i=0
-
-
-
-for(let y=0;y<SIZE;y++){
-
-
-
-for(let x=0;x<SIZE;x++){
-
-
-
-cells[i].className=
-board[y][x]
-?
-"cell fill"
-:
-"cell"
-
-
-
-i++
-
-
-
+  return {
+    gx: Math.floor((rotatedX + rect.width / 2) / CELL),
+    gy: Math.floor((rotatedY + rect.height / 2) / CELL),
+  };
 }
 
+function updateGhost(x, y) {
+  ghost = [];
+  const { gx, gy } = toGrid(x, y);
 
+  for (let row = 0; row < shape.length; row++) {
+    for (let column = 0; column < shape[0].length; column++) {
+      if (!shape[row][column]) continue;
 
+      const boardX = gx + column;
+      const boardY = gy + row;
+      if (boardX >= 0 && boardX < SIZE && boardY >= 0 && boardY < SIZE) {
+        ghost.push({ x: boardX, y: boardY });
+      }
+    }
+  }
+
+  render();
 }
 
+function move(event) {
+  if (!drag) return;
 
-
-ghost.forEach(pos=>{
-
-
-
-let index=
-pos.y*SIZE+pos.x
-
-
-
-if(cells[index]){
-
-
-
-cells[index]
-.classList.add(
-"ghost"
-)
-
-
-
+  drag.style.left = event.clientX - 40 + "px";
+  drag.style.top = event.clientY - 40 + "px";
+  updateGhost(event.clientX, event.clientY);
 }
 
+function drop(event) {
+  if (!drag) return;
 
+  const piece = drag;
+  const pieceShape = shape;
+  window.removeEventListener("pointermove", move);
+  window.removeEventListener("pointerup", drop);
 
-})
+  const { gx, gy } = toGrid(event.clientX, event.clientY);
+  piece.classList.remove("dragging");
+  piece.style.left = "";
+  piece.style.top = "";
+  drag = null;
+  ghost = [];
 
-
-
-scoreDiv.innerText=
-"Score: "+score
-
-
-
-if(score>best){
-
-
-
-best=score
-
-
-
-localStorage.setItem(
-"aqua_best",
-best
-)
-
-
-
-bestDiv.innerText=
-"Recorde: "+best
-
-
-
+  render();
+  place(gx, gy, piece, pieceShape);
 }
 
+function canPlace(pieceShape, positionX, positionY) {
+  for (let y = 0; y < pieceShape.length; y++) {
+    for (let x = 0; x < pieceShape[0].length; x++) {
+      if (!pieceShape[y][x]) continue;
 
+      const boardX = positionX + x;
+      const boardY = positionY + y;
+      if (
+        boardX < 0 ||
+        boardX >= SIZE ||
+        boardY < 0 ||
+        boardY >= SIZE ||
+        board[boardY][boardX]
+      ) {
+        return false;
+      }
+    }
+  }
 
+  return true;
 }
 
+async function place(positionX, positionY, piece, pieceShape) {
+  if (resolving || gameOver || !canPlace(pieceShape, positionX, positionY)) {
+    return;
+  }
 
+  resolving = true;
+  const placed = [];
 
-function generatePieces(){
+  for (let y = 0; y < pieceShape.length; y++) {
+    for (let x = 0; x < pieceShape[0].length; x++) {
+      if (!pieceShape[y][x]) continue;
 
+      board[positionY + y][positionX + x] = 1;
+      placed.push((positionY + y) * SIZE + positionX + x);
+      score += 10;
+    }
+  }
 
+  const special = piece.dataset.special == "true";
+  piece.remove();
+  sound(450, 0.08);
+  vibrate(30);
+  render();
+  await frame();
 
-piecesDiv.innerHTML=""
+  const cells = document.querySelectorAll(".cell");
+  placed.forEach((index) =>
+    cells[index].animate(
+      [
+        { transform: "scale(1.5)", filter: "brightness(1.8)" },
+        {
+          transform: "scale(0.9)",
+          filter: "brightness(1.2)",
+          offset: 0.6,
+        },
+        { transform: "scale(1)", filter: "brightness(1)" },
+      ],
+      { duration: 380, easing: "ease-out" },
+    ),
+  );
 
+  await wait(380);
+  if (special) {
+    await explode();
+  } else {
+    await checkLines();
+  }
 
+  if (piecesDiv.children.length === 0) {
+    changeAxis();
+    await wait(800);
+    generatePieces();
+  }
 
-for(let i=0;i<3;i++){
-
-
-
-let special=
-Math.random()<0.12
-
-
-
-let currentShape=
-special
-?
-[[1]]
-:
-JSON.parse(
-JSON.stringify(
-SHAPES[
-Math.floor(
-Math.random()*
-SHAPES.length
-)
-]
-)
-)
-
-
-
-let piece=
-document.createElement("div")
-
-
-
-piece.className=
-"piece"
-
-
-
-piece.dataset.special=
-special
-
-
-
-piece.dataset.shape=
-JSON.stringify(
-currentShape
-)
-
-
-
-piece.style.gridTemplateColumns=
-`repeat(${currentShape[0].length},22px)`
-
-
-
-currentShape.forEach(row=>{
-
-
-
-row.forEach(v=>{
-
-
-
-let b=
-document.createElement("div")
-
-
-
-if(v){
-
-
-
-b.className=
-special
-?
-"block bomb"
-:
-"block"
-
-
-
-}else{
-
-
-
-b.style.visibility=
-"hidden"
-
-
-
+  resolving = false;
+  checkGameOver();
 }
 
+function burst(centerX, centerY, colors, count, distance, duration, size) {
+  for (let i = 0; i < count; i++) {
+    const particle = document.createElement("div");
+    const particleSize = size * (0.6 + Math.random() * 0.8);
+    const angle = Math.random() * Math.PI * 2;
+    const travelDistance = distance * (0.5 + Math.random() * 0.7);
+    const color = colors[i % colors.length];
 
-
-piece.appendChild(b)
-
-
-
-})
-
-
-
-})
-
-
-
-piece.addEventListener(
-"pointerdown",
-startDrag
-)
-
-
-
-piecesDiv.appendChild(piece)
-
-
-
+    particle.className = "fx";
+    particle.style.cssText = `left: ${centerX - particleSize / 2}px; top: ${
+      centerY - particleSize / 2
+    }px; width: ${particleSize}px; height: ${particleSize}px; background: ${color}; box-shadow: 0 0 8px ${color}`;
+    document.body.appendChild(particle);
+    particle
+      .animate(
+        [
+          { transform: "translate(0, 0) scale(1)", opacity: 1 },
+          {
+            transform: `translate(${Math.cos(angle) * travelDistance}px, ${
+              Math.sin(angle) * travelDistance
+            }px) scale(0)`,
+            opacity: 0,
+          },
+        ],
+        {
+          duration: duration * (0.7 + Math.random() * 0.5),
+          easing: "cubic-bezier(0.1, 0.7, 0.3, 1)",
+        },
+      )
+      .onfinish = () => particle.remove();
+  }
 }
 
+async function explode() {
+  goldBlast.style.display = "block";
+  sound(120, 0.4);
+  sound(90, 0.6);
+  vibrate([100, 50, 200]);
 
+  const flash = goldBlast.querySelector(".flash");
+  const ring = goldBlast.querySelector(".ring");
+  const sparks = [];
 
+  for (let i = 0; i < 52; i++) {
+    const spark = document.createElement("div");
+    const angle = (i / 52) * Math.PI * 2;
+    const distance =
+      Math.max(innerWidth, innerHeight) * (0.5 + Math.random() * 0.6);
+
+    spark.className = "spark";
+    goldBlast.appendChild(spark);
+    sparks.push(spark);
+    spark.animate(
+      [
+        { transform: "translate(0, 0) scale(1)", opacity: 1 },
+        {
+          transform: `translate(${Math.cos(angle) * distance}px, ${
+            Math.sin(angle) * distance
+          }px) scale(2.5)`,
+          opacity: 0,
+        },
+      ],
+      {
+        duration: 1300,
+        easing: "cubic-bezier(0.1, 0.7, 0.3, 1)",
+        fill: "forwards",
+      },
+    );
+  }
+
+  flash.animate(
+    [
+      { opacity: 0 },
+      { opacity: 1, offset: 0.25 },
+      { opacity: 0.6, offset: 0.55 },
+      { opacity: 0 },
+    ],
+    { duration: 1500, easing: "ease-out", fill: "forwards" },
+  );
+  ring.animate(
+    [
+      { transform: "scale(0)", opacity: 1 },
+      {
+        transform: `scale(${Math.max(innerWidth, innerHeight) / 40})`,
+        opacity: 0,
+      },
+    ],
+    { duration: 1200, easing: "ease-out", fill: "forwards" },
+  );
+
+  await wait(450);
+  board.forEach((row) => row.fill(0));
+  score += GOLD_BONUS;
+  render();
+  await wait(1100);
+
+  sparks.forEach((spark) => spark.remove());
+  goldBlast.style.display = "none";
 }
 
+async function checkLines() {
+  const clear = new Set();
 
+  for (let y = 0; y < SIZE; y++) {
+    if (board[y].every((value) => value)) {
+      for (let x = 0; x < SIZE; x++) clear.add(y * SIZE + x);
+    }
+  }
 
-function startDrag(e){
+  for (let x = 0; x < SIZE; x++) {
+    let isFullColumn = true;
+    for (let y = 0; y < SIZE; y++) {
+      if (!board[y][x]) isFullColumn = false;
+    }
 
+    if (isFullColumn) {
+      for (let y = 0; y < SIZE; y++) clear.add(y * SIZE + x);
+    }
+  }
 
+  if (!clear.size) return;
 
-drag=
-e.currentTarget
+  const cells = document.querySelectorAll(".cell");
+  const animations = [];
+  sound(800, 0.2);
+  vibrate(80);
 
+  clear.forEach((index) => {
+    const cell = cells[index];
+    const rect = cell.getBoundingClientRect();
 
+    animations.push(
+      cell.animate(
+        [
+          { background: RAINBOW[0], transform: "scale(1)", opacity: 1 },
+          {
+            background: RAINBOW[2],
+            transform: "scale(1.4) rotate(20deg)",
+            opacity: 1,
+            offset: 0.25,
+          },
+          {
+            background: RAINBOW[4],
+            transform: "scale(1.2) rotate(-20deg)",
+            opacity: 1,
+            offset: 0.5,
+          },
+          {
+            background: RAINBOW[6],
+            transform: "scale(1.5)",
+            opacity: 0.9,
+            offset: 0.75,
+          },
+          { background: RAINBOW[1], transform: "scale(0)", opacity: 0 },
+        ],
+        {
+          duration: 650,
+          delay: (index % SIZE + Math.floor(index / SIZE)) * 15,
+          easing: "ease-in-out",
+          fill: "both",
+        },
+      ),
+    );
+    burst(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+      RAINBOW,
+      4,
+      90,
+      800,
+      10,
+    );
+  });
 
-shape=
-JSON.parse(
-drag.dataset.shape
-)
+  await wait(650 + 14 * 15);
+  clear.forEach((index) => {
+    board[Math.floor(index / SIZE)][index % SIZE] = 0;
+  });
+  score += clear.size * 20;
+  render();
 
-
-
-drag.classList.add(
-"dragging"
-)
-
-
-
-move(e)
-
-
-
-window.addEventListener(
-"pointermove",
-move
-)
-
-
-
-window.addEventListener(
-"pointerup",
-drop
-)
-
-
-
+  const updatedCells = document.querySelectorAll(".cell");
+  animations.forEach((animation) => animation.cancel());
+  clear.forEach((index) => {
+    updatedCells[index].animate(
+      [
+        { transform: "scale(0.4)", opacity: 0 },
+        { transform: "scale(1.08)", opacity: 1, offset: 0.7 },
+        { transform: "scale(1)", opacity: 1 },
+      ],
+      { duration: 420, easing: "ease-out" },
+    );
+  });
 }
 
+function canFit(pieceShape) {
+  for (let positionY = 0; positionY < SIZE; positionY++) {
+    for (let positionX = 0; positionX < SIZE; positionX++) {
+      if (canPlace(pieceShape, positionX, positionY)) return true;
+    }
+  }
 
-
-function updateGhost(x,y){
-
-
-
-ghost=[]
-
-
-
-let rect=
-boardDiv.getBoundingClientRect()
-
-
-
-let centerX=
-rect.left+
-rect.width/2
-
-
-
-let centerY=
-rect.top+
-rect.height/2
-
-
-
-let dx=x-centerX
-let dy=y-centerY
-
-
-
-let rad=
-(-rotation*Math.PI)/180
-
-
-
-let rx=
-dx*Math.cos(rad)
--
-dy*Math.sin(rad)
-
-
-
-let ry=
-dx*Math.sin(rad)
-+
-dy*Math.cos(rad)
-
-
-
-x=rx+rect.width/2
-y=ry+rect.height/2
-
-
-
-let gx=
-Math.floor(x/46)
-
-
-
-let gy=
-Math.floor(y/46)
-
-
-
-for(let yy=0;yy<shape.length;yy++){
-
-
-
-for(let xx=0;xx<shape[0].length;xx++){
-
-
-
-if(shape[yy][xx]){
-
-
-
-let bx=gx+xx
-let by=gy+yy
-
-
-
-if(
-bx>=0&&
-bx<SIZE&&
-by>=0&&
-by<SIZE
-){
-
-
-
-ghost.push({
-x:bx,
-y:by
-})
-
-
-
+  return false;
 }
 
+function checkGameOver() {
+  if (gameOver || resolving) return;
 
+  const pieces = document.querySelectorAll(".piece");
+  if (!pieces.length) return;
 
+  for (const piece of pieces) {
+    if (canFit(JSON.parse(piece.dataset.shape))) return;
+  }
+
+  gameOver = true;
+  if (score > best) {
+    best = score;
+    bestDiv.innerText = "Recorde: " + best;
+  }
+  if (score >= best) localStorage.setItem("aqua_best", best);
+
+  finalScore.innerText = "Pontuação: " + score + "  |  Recorde: " + best;
+  sound(80, 0.8);
+  vibrate([200, 100, 400]);
+  document.body.classList.add("defeat");
+  overlay.classList.add("visible");
 }
 
+function rotateBoardData() {
+  const previousBoard = board.map((row) => row.slice());
 
-
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      board[x][SIZE - 1 - y] = previousBoard[y][x];
+    }
+  }
 }
 
-
-
+function changeAxis() {
+  rotation = (rotation + 90) % 360;
+  rotateBoardData();
+  boardDiv.style.transform = `rotate(${rotation}deg)`;
+  render();
 }
 
+async function restart() {
+  if (resolving) return;
 
+  resolving = true;
+  document.body.classList.remove("defeat");
+  window.scrollTo(0, 0);
 
-render()
+  const curtain = document.getElementById("restartCurtain");
+  curtain.replaceChildren();
+  curtain.hidden = false;
 
+  const ROWS = 16;
+  const COLS = 10;
+  const blocks = [];
 
+  for (let i = 0; i < ROWS * COLS; i++) {
+    const block = document.createElement("div");
+    block.className = "curtainBlock";
+    block.style.background = `hsl(${170 + (i % COLS) * 6}, 60%, ${
+      28 + (Math.floor(i / COLS) % 3) * 5
+    }%)`;
+    curtain.appendChild(block);
+    blocks.push(block);
+  }
 
+  const delayOf = (index) =>
+    (ROWS - 1 - Math.floor(index / COLS)) * 28 + (index % COLS) * 10;
+  const entranceAnimations = blocks.map((block, index) =>
+    block.animate(
+      [
+        { transform: "translateY(125vh)", opacity: 0 },
+        { transform: "translateY(0)", opacity: 1 },
+      ],
+      {
+        duration: 680,
+        delay: delayOf(index),
+        easing: "cubic-bezier(0.22, 0.8, 0.3, 1)",
+        fill: "both",
+      },
+    ),
+  );
+
+  sound(200, 0.5);
+  await Promise.all(entranceAnimations.map((animation) => animation.finished));
+
+  board.forEach((row) => row.fill(0));
+  score = 0;
+  rotation = 0;
+  ghost = [];
+  boardDiv.style.transition = "none";
+  boardDiv.style.transform = "rotate(0deg)";
+  void boardDiv.offsetWidth;
+  boardDiv.style.transition = "";
+  overlay.classList.remove("visible");
+  gameOver = false;
+  render();
+  generatePieces();
+  await wait(140);
+
+  const exitAnimations = blocks.map((block, index) =>
+    block.animate(
+      [
+        { transform: "translateY(0)", opacity: 1 },
+        { transform: "translateY(40vh)", opacity: 0.8, offset: 0.72 },
+        { transform: "translateY(125vh)", opacity: 0 },
+      ],
+      {
+        duration: 900,
+        delay: Math.floor(index / COLS) * 28 + (index % COLS) * 10,
+        easing: "ease-in",
+        fill: "both",
+      },
+    ),
+  );
+
+  await Promise.all(exitAnimations.map((animation) => animation.finished));
+  curtain.hidden = true;
+  curtain.replaceChildren();
+  resolving = false;
 }
 
-
-
-function move(e){
-
-
-
-if(!drag)return
-
-
-
-drag.style.left=
-(e.clientX-40)+"px"
-
-
-
-drag.style.top=
-(e.clientY-40)+"px"
-
-
-
-updateGhost(
-e.clientX,
-e.clientY
-)
-
-
-
-}
-
-
-
-function drop(e){
-
-
-
-if(!drag)return
-
-
-
-let rect=
-boardDiv.getBoundingClientRect()
-
-
-
-let centerX=
-rect.left+
-rect.width/2
-
-
-
-let centerY=
-rect.top+
-rect.height/2
-
-
-
-let dx=
-e.clientX-centerX
-
-
-
-let dy=
-e.clientY-centerY
-
-
-
-let rad=
-(-rotation*Math.PI)/180
-
-
-
-let rx=
-dx*Math.cos(rad)
--
-dy*Math.sin(rad)
-
-
-
-let ry=
-dx*Math.sin(rad)
-+
-dy*Math.cos(rad)
-
-
-
-let x=
-rx+rect.width/2
-
-
-
-let y=
-ry+rect.height/2
-
-
-
-let gx=
-Math.floor(x/46)
-
-
-
-let gy=
-Math.floor(y/46)
-
-
-
-place(gx,gy)
-
-
-
-ghost=[]
-
-
-
-drag.classList.remove(
-"dragging"
-)
-
-
-
-drag.style.left=""
-drag.style.top=""
-
-
-
-drag=null
-
-
-
-window.removeEventListener(
-"pointermove",
-move
-)
-
-
-
-window.removeEventListener(
-"pointerup",
-drop
-)
-
-
-
-render()
-
-
-
-}
-
-
-
-function place(px,py){
-
-
-
-for(let y=0;y<shape.length;y++){
-
-
-
-for(let x=0;x<shape[0].length;x++){
-
-
-
-if(shape[y][x]){
-
-
-
-let bx=px+x
-let by=py+y
-
-
-
-if(
-bx<0||
-bx>=SIZE||
-by<0||
-by>=SIZE
-)return
-
-
-
-if(board[by][bx])
-return
-
-
-
-}
-
-
-
-}
-
-
-
-}
-
-
-
-for(let y=0;y<shape.length;y++){
-
-
-
-for(let x=0;x<shape[0].length;x++){
-
-
-
-if(shape[y][x]){
-
-
-
-board[py+y][px+x]=1
-
-
-
-score+=10
-
-
-
-}
-
-
-
-}
-
-
-
-}
-
-
-
-if(
-drag.dataset.special=="true"
-){
-
-
-
-explode(
-px,
-py
-)
-
-
-
-}
-
-
-
-sound(450,.08)
-
-
-
-vibrate(30)
-
-
-
-drag.remove()
-
-
-
-checkLines()
-
-
-
-render()
-
-
-
-if(
-piecesDiv.children.length==0
-){
-
-
-
-changeAxis()
-
-
-
-setTimeout(()=>{
-
-
-
-generatePieces()
-
-
-
-checkGameOver()
-
-
-
-document
-.querySelectorAll(".piece")
-.forEach(p=>{
-
-
-
-p.style.transform=
-`rotate(${rotation}deg`
-
-
-
-})
-
-
-
-},800)
-
-
-
-}
-
-
-
-}
-
-
-
-function explode(x,y){
-
-
-
-for(let yy=-1;yy<=1;yy++){
-
-
-
-for(let xx=-1;xx<=1;xx++){
-
-
-
-let bx=x+xx
-let by=y+yy
-
-
-
-if(
-bx>=0&&
-bx<SIZE&&
-by>=0&&
-by<SIZE
-){
-
-
-
-board[by][bx]=0
-
-
-
-}
-
-
-
-}
-
-
-
-}
-
-
-
-sound(120,.2)
-
-
-
-vibrate(100)
-
-
-
-}
-
-
-
-function checkLines(){
-
-
-
-let clear=[]
-
-
-
-for(let y=0;y<SIZE;y++){
-
-
-
-if(
-board[y].every(v=>v)
-){
-
-
-
-for(let x=0;x<SIZE;x++){
-
-
-
-clear.push({
-x,y
-})
-
-
-
-}
-
-
-
-}
-
-
-
-}
-
-
-
-for(let x=0;x<SIZE;x++){
-
-
-
-let ok=true
-
-
-
-for(let y=0;y<SIZE;y++){
-
-
-
-if(!board[y][x])
-ok=false
-
-
-
-}
-
-
-
-if(ok){
-
-
-
-for(let y=0;y<SIZE;y++){
-
-
-
-clear.push({
-x,y
-})
-
-
-
-}
-
-
-
-}
-
-
-
-}
-
-
-
-if(!clear.length)
-return
-
-
-
-let cells=
-document.querySelectorAll(".cell")
-
-
-
-clear.forEach(p=>{
-
-
-
-cells[
-p.y*SIZE+p.x
-]
-.classList.add(
-"clearAnim"
-)
-
-
-
-})
-
-
-
-setTimeout(()=>{
-
-
-
-clear.forEach(p=>{
-
-
-
-board[p.y][p.x]=0
-
-
-
-})
-
-
-
-score+=clear.length*20
-
-
-
-sound(800,.2)
-
-
-
-vibrate(80)
-
-
-
-render()
-
-
-
-},250)
-
-
-
-}
-
-
-
-function canFit(shape){
-
-
-
-for(let py=0;py<SIZE;py++){
-
-
-
-for(let px=0;px<SIZE;px++){
-
-
-
-let ok=true
-
-
-
-for(let y=0;y<shape.length;y++){
-
-
-
-for(let x=0;x<shape[0].length;x++){
-
-
-
-if(shape[y][x]){
-
-
-
-let bx=px+x
-let by=py+y
-
-
-
-if(
-bx<0||
-bx>=SIZE||
-by<0||
-by>=SIZE||
-board[by][bx]
-){
-
-
-
-ok=false
-
-
-
-}
-
-
-
-}
-
-
-
-}
-
-
-
-}
-
-
-
-if(ok)return true
-
-
-
-}
-
-
-
-}
-
-
-
-return false
-
-
-
-}
-
-
-
-function checkGameOver(){
-
-
-
-let pieces=
-document.querySelectorAll(".piece")
-
-
-
-for(let p of pieces){
-
-
-
-let s=
-JSON.parse(
-p.dataset.shape
-)
-
-
-
-if(canFit(s))
-return
-
-
-
-}
-
-
-
-finalScore.innerText=
-"Pontuação: "+score
-
-
-
-overlay.style.display=
-"flex"
-
-
-
-}
-
-
-
-function rotateBoardData(){
-
-
-
-let temp=[]
-
-
-
-for(let y=0;y<SIZE;y++){
-
-
-
-temp[y]=[]
-
-
-
-for(let x=0;x<SIZE;x++){
-
-
-
-temp[y][x]=0
-
-
-
-}
-
-
-
-}
-
-
-
-for(let y=0;y<SIZE;y++){
-
-
-
-for(let x=0;x<SIZE;x++){
-
-
-
-temp[x][SIZE-1-y]
-=
-board[y][x]
-
-
-
-}
-
-
-
-}
-
-
-
-for(let y=0;y<SIZE;y++){
-
-
-
-for(let x=0;x<SIZE;x++){
-
-
-
-board[y][x]=
-temp[y][x]
-
-
-
-}
-
-
-
-}
-
-
-
-}
-
-
-
-function changeAxis(){
-
-
-
-rotation=
-(rotation+90)%360
-
-
-
-rotateBoardData()
-
-
-
-boardDiv.style.transform=
-`rotate(${rotation}deg)`
-
-
-
-render()
-
-
-
-}
-
-
-
-function restart(){
-
-
-
-location.reload()
-
-
-
-}
-
-
-
-init()
-
-
-
+init();
 </script>
-
-
-
 </body>
 </html>
